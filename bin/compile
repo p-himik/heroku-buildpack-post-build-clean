@@ -1,32 +1,79 @@
 #!/usr/bin/env bash
+#
+# Find and delete all files/directories matching specified globs
+# Globs are separated by newlines in .slug-post-clean located in the build directory's root
+# This is useful for deleting files created after Heroku's built-in cleanup process
+# based on .slugignore, e.g. files/dirs in installed dependency folders
 
 set -euo pipefail
 
-readonly BUILD_DIR=$1
-readonly CLEAN_FILES=.slug-post-clean
+readonly BUILDPACK_DIR=$(cd $(dirname $0); cd ..; pwd)
 
-if [[ ! -n "${BUILD_DIR}" ]]; then
-  echo "No build directory specified - exiting"
-  exit 1
-fi
+# Common helper functions
+source $BUILDPACK_DIR/bin/util/common.sh
+
+readonly CLEAN_FILES=.slug-post-clean
+readonly BUILD_DIR=$1
 
 cd ${BUILD_DIR}
 
-if [[ ! -f "${CLEAN_FILES}" ]]; then
-  echo "Could not find .slug-post-clean file - exiting"
-  exit 1
-fi
+#######################################
+# Locate files/dirs in PWD matching globs in $CLEAN_FILES
+# Globals:
+#   CLEAN_FILES
+#   IFS
+#   fileArray
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+findMatchingFiles()
+{
+  local globArray oldIFS
 
-while read file; do
-  [[ ! -n "${file}" ]] && continue
+  [[ -f ${CLEAN_FILES} ]] || error_exit "Could not find file ${CLEAN_FILES}"
 
-  if [[ -f "${file}" ]]; then
-    echo "Removing file ${file} from slug"
-    rm -f ${file}
-  elif [[ -d "${file}" ]]; then
-    echo "Removing directory ${file} from slug"
-    rm -rf ${file}
-  else
-    echo "Location ${file} not found - ignoring"
-  fi
-done <${CLEAN_FILES}
+  status "Finding all matching files and directories in ${CLEAN_FILES}"
+
+  # Temporarily change IFS from all whitespace to newline only
+  oldIFS=$IFS
+  IFS=$'\n'
+
+  # Read globs to an array
+  mapfile -t globArray < ${CLEAN_FILES}
+
+  # Recurse through all matching files/dirs and populate a new array with the result
+  fileArray=()
+  while IFS= read -r -d $'\0'; do
+    fileArray+=("$REPLY")
+  done < <(find ${globArray[*]} -print0)
+
+  # Restore IFS
+  IFS=$oldIFS
+}
+
+#######################################
+# Delete all matching files and directories
+# Globals:
+#   fileArray
+# Arguments:
+#   None
+# Returns:
+#   None
+#######################################
+runRemoval()
+{
+  [[ -z ${fileArray+x} ]] && error_exit "No files or directories to remove from slug"
+
+  status "Removing all matching files and directories from slug"
+  local fileOrDir
+  for fileOrDir in "${fileArray[@]}"; do
+    rm -rf "$fileOrDir"
+    echo "Removed ${fileOrDir} from slug"
+  done
+}
+
+# Run!
+findMatchingFiles
+runRemoval

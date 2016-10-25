@@ -2,17 +2,11 @@
 
 set -euo pipefail
 
-readonly BUILD_DIR=$1
-
-if [[ ! -n "${BUILD_DIR}" ]]; then
-  echo "No build directory specified - exiting"
-  exit 1
-fi
-
-if [[ ! -f "${BUILD_DIR}/.slug-post-clean" ]]; then
+# This pack is valid for apps with a .slug-post-clean in the root
+if [ -f $1/.slug-post-clean ]; then
+  echo "POST BUILD CLEAN"
+  exit 0
+else
   echo "Could not find .slug-post-clean file - exiting"
   exit 1
 fi
-
-echo "POST BUILD CLEAN"
-exit 0

@@ -16,10 +16,12 @@ are necessary for the build, but are not required at runtime. There may
 also be installable build dependencies that are not runtime
 dependencies.
 
-In our case, a complex front-end build involves significant CSS, JS and
-image assets, along with a large installation of node modules, all of
+Use cases include:
+
+* Large installation of node modules, all of
 which are used only for building the production assets, but then remain
 part of the slug.
+* Test and spec folders in Gem dependencies stored in vendor/bundle
 
 ## Usage
 
@@ -36,14 +38,11 @@ https://github.com/heroku/heroku-buildpack-ruby
 https://github.com/Lostmyname/heroku-post-build-clean-buildpack
 ```
 
-The `.slug-post-clean` file supports single-file and single-directory
-declarations only, e.g.:
+The `.slug-post-clean` file supports file globs (including file/directory names with whitespace, but NOT new lines) e.g.:
 
 ```
+vendor/bundle/ruby/*/gems/sass-*/test
 some_huge_file.psd
 some/nested/directory
 why_does_this_app_even_contain_a.tiff
 ```
-
-I might expand it to support file globs, but for the moment it's not
-necessary and the testing implications give me the willies.
