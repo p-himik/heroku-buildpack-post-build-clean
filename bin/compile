@@ -34,7 +34,7 @@ findMatchingFiles()
 
   [[ -f ${CLEAN_FILES} ]] || error_exit "Could not find file ${CLEAN_FILES}"
 
-  status "Finding all matching files and directories in ${CLEAN_FILES}"
+  status "Finding all files and directories from ${CLEAN_FILES} matching:"
 
   # Temporarily change IFS from all whitespace to newline only
   oldIFS=$IFS
@@ -42,6 +42,11 @@ findMatchingFiles()
 
   # Read globs to an array
   mapfile -t globArray < ${CLEAN_FILES}
+
+  # Output globs
+  printf '%s\n' ${globArray[*]}
+
+  status "Matches not found:"
 
   # Recurse through all matching files/dirs and populate a new array with the result
   fileArray=()
@@ -68,10 +73,12 @@ runRemoval()
 
   status "Removing all matching files and directories from slug"
   local fileOrDir
+
   for fileOrDir in "${fileArray[@]}"; do
     rm -rf "$fileOrDir"
-    echo "Removed ${fileOrDir} from slug"
   done
+
+  echo "Successfully cleaned ${#fileArray[@]} files/directories from slug"
 }
 
 # Run!
