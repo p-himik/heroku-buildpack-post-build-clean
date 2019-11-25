@@ -21,7 +21,6 @@ cd ${BUILD_DIR}
 # Locate files/dirs in PWD matching globs in $CLEAN_FILES
 # Globals:
 #   CLEAN_FILES
-#   IFS
 #   fileArray
 # Arguments:
 #   None
@@ -30,32 +29,19 @@ cd ${BUILD_DIR}
 #######################################
 findMatchingFiles()
 {
-  local globArray oldIFS
-
   [[ -f ${CLEAN_FILES} ]] || error_exit "Could not find file ${CLEAN_FILES}"
 
-  status "Finding all files and directories from ${CLEAN_FILES} matching:"
-
-  # Temporarily change IFS from all whitespace to newline only
-  oldIFS=$IFS
-  IFS=$'\n'
-
-  # Read globs to an array
-  mapfile -t globArray < ${CLEAN_FILES}
-
-  # Output globs
-  printf '%s\n' ${globArray[*]}
-
-  status "Matches not found:"
+  status "Finding all files and directories from ${CLEAN_FILES}"
 
   # Recurse through all matching files/dirs and populate a new array with the result
   fileArray=()
-  while IFS= read -r -d $'\0'; do
-    fileArray+=("$REPLY")
-  done < <(find ${globArray[*]} -print0)
-
-  # Restore IFS
-  IFS=$oldIFS
+  while IFS= read -r line; do
+    [[ "$line" =~ '^ *#' ]] && continue
+    printf 'Running `find %s`\n' "$line"
+    while IFS= read -r -d $'\0' file; do
+      fileArray+=("$file")
+    done < <(find $line -print0)
+  done < "${CLEAN_FILES}"
 }
 
 #######################################
